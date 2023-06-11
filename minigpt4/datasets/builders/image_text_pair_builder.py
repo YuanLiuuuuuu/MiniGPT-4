@@ -1,11 +1,48 @@
 import os
 import logging
 import warnings
+from collections import OrderedDict
+from PIL import Image
 
 from minigpt4.common.registry import registry
 from minigpt4.datasets.builders.base_dataset_builder import BaseDatasetBuilder
 from minigpt4.datasets.datasets.laion_dataset import LaionDataset
-from minigpt4.datasets.datasets.cc_sbu_dataset import CCSBUDataset, CCSBUAlignDataset
+from minigpt4.datasets.datasets.cc_sbu_dataset import CCSBUDataset, CCSBUAlignDataset # noqa
+from minigpt4.datasets.datasets.base_dataset import BaseDataset
+from minigpt4.datasets.datasets.image_text_pair_dataset import CC3MDataset, CC12MDataset
+
+
+class __DisplMixin:
+    def displ_item(self, index):
+        sample, ann = self.__getitem__(index), self.annotation[index]
+
+        return OrderedDict({
+            "file": os.path.basename(ann["image"]),
+            "caption": ann["caption"],
+            "image": sample["image"],
+        })
+
+
+class ImageTextPairDataset(BaseDataset, __DisplMixin):
+    def __init__(self, vis_processor, text_processor, vis_root, ann_paths):
+        """
+        vis_root (string): Root directory of images (e.g. coco/images/)
+        ann_root (string): directory to store the annotation file
+        """
+        super().__init__(vis_processor, text_processor, vis_root, ann_paths)
+
+    def __getitem__(self, index):
+
+        # TODO this assumes image input, not general enough
+        ann = self.annotation[index]
+
+        image_path = os.path.join(self.vis_root, ann["image"])
+        image = Image.open(image_path).convert("RGB")
+
+        image = self.vis_processor(image)
+        caption = self.text_processor(ann["caption"])
+
+        return {"image": image, "text_input": caption}
 
 
 @registry.register_builder("cc_sbu")
@@ -91,7 +128,8 @@ class CCSBUAlignBuilder(BaseDatasetBuilder):
         datasets = dict()
 
         if not os.path.exists(storage_path):
-            warnings.warn("storage path {} does not exist.".format(storage_path))
+            warnings.warn(
+                "storage path {} does not exist.".format(storage_path))
 
         # create datasets
         dataset_cls = self.train_dataset_cls
@@ -103,3 +141,39 @@ class CCSBUAlignBuilder(BaseDatasetBuilder):
         )
 
         return datasets
+
+
+@registry.register_builder("conceptual_caption_3m")
+class ConceptualCaption3MBuilder(BaseDatasetBuilder):
+    train_dataset_cls = CC3MDataset
+
+    DATASET_CONFIG_DICT = {
+        "default": "configs/datasets/conceptual_caption/defaults_3m.yaml"
+    }
+
+
+@registry.register_builder("conceptual_caption_12m")
+class ConceptualCaption12MBuilder(BaseDatasetBuilder):
+    train_dataset_cls = CC12MDataset
+
+    DATASET_CONFIG_DICT = {
+        "default": "configs/datasets/conceptual_caption/defaults_12m.yaml"
+    }
+
+
+@registry.register_builder("sbu_caption")
+class SBUCaptionBuilder(BaseDatasetBuilder):
+    train_dataset_cls = ImageTextPairDataset
+
+    DATASET_CONFIG_DICT = {
+        "default": "configs/datasets/sbu_caption/defaults.yaml"
+    }
+
+
+@registry.register_builder("vg_caption")
+class VGCaptionBuilder(BaseDatasetBuilder):
+    train_dataset_cls = ImageTextPairDataset
+
+    DATASET_CONFIG_DICT = {
+        "default": "configs/datasets/vg/defaults_caption.yaml"
+    }

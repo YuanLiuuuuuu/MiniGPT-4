@@ -31,6 +31,8 @@ from minigpt4.processors import *
 from minigpt4.runners import *
 from minigpt4.tasks import *
 
+from mmengine.dist import init_dist
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Training")
@@ -80,7 +82,8 @@ def main():
 
     cfg = Config(parse_args())
 
-    init_distributed_mode(cfg.run_cfg)
+    # init_distributed_mode(cfg.run_cfg)
+    init_dist('slurm')
 
     setup_seeds(cfg)
 
