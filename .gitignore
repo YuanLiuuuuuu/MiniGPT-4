@@ -1,0 +1,6 @@
+data
+*__pycache__*
+vicuna*
+stage*
+minigpt4-13b
+minigpt4-7b
