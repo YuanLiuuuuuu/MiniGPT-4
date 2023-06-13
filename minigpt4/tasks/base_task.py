@@ -43,7 +43,6 @@ class BaseTask:
         Returns:
             dict: Dictionary of torch.utils.data.Dataset objects by split.
         """
-
         datasets = dict()
 
         datasets_config = cfg.datasets_cfg

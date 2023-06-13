@@ -207,8 +207,7 @@ class RunnerBase:
             )
 
             datasets = reorg_datasets_by_split(self.datasets)
-            self.datasets = datasets
-            # self.datasets = concat_datasets(datasets)
+            self.datasets = concat_datasets(datasets)
 
             # print dataset statistics after concatenation/chaining
             for split_name in self.datasets:
@@ -550,7 +549,6 @@ class RunnerBase:
             return loader
 
         loaders = []
-
         for dataset, bsz, is_train, collate_fn in zip(
             datasets, batch_sizes, is_trains, collate_fns
         ):
